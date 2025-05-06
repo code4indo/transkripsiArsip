@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "transkripsi-arsip"
+version = "0.1.0"
+description = "Program untuk mentranskripsi gambar dokumen menggunakan Gemini API."
+authors = ["Anda <anda@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+google-generativeai = "^0.5.0" # Atau versi terbaru yang kompatibel
+python-dotenv = "^1.0.0"
+Pillow = "^10.0.0" # Untuk memvalidasi dan memanipulasi gambar jika diperlukan
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+transkripsi = "transkripsi_arsip.main:run"

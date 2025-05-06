@@ -1,0 +1,106 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Build artifacts
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+# Обычно используется для создания исполняемых файлов
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+.hypothesis/
+*.cover
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# pyenv
+.python-version
+
+# celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+venv/
+ENV/
+env/
+ENV/
+
+# Poetry
+# poetry.lock (Biasanya di-commit untuk aplikasi, opsional untuk library)
+# .pdm-python
+# pdm.lock
+
+# VS Code
+.vscode/
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+*.swp
+*~
+*.tmp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Project specific
+/data/output/
+# Jika Anda tidak ingin contoh input di-commit:
+# /data/input_contoh/
+
+# File .env (sudah termasuk di bagian Environments, tapi ditegaskan lagi)
+.env
