@@ -42,11 +42,15 @@ def jalankan_transkripsi(path_direktori_input_str: str):
         try:
             teks_hasil_transkripsi = ocr.transkripsi_gambar(path_gambar)
             
-            nama_file_output = path_gambar.stem + ".json" # nama file sama dengan gambar, ekstensi .json
-            path_file_output_json = path_direktori_output / nama_file_output
+            nama_file_output_base = path_gambar.stem
+            path_file_output_json = path_direktori_output / (nama_file_output_base + ".json")
+            path_file_output_txt = path_direktori_output / (nama_file_output_base + ".txt") # Path untuk file .txt
             
             utils.simpan_hasil_json(path_file_output_json, path_gambar.name, teks_hasil_transkripsi)
-            print(f"Hasil transkripsi untuk {path_gambar.name} disimpan di {path_file_output_json}")
+            print(f"Hasil transkripsi JSON untuk {path_gambar.name} disimpan di {path_file_output_json}")
+
+            utils.simpan_hasil_txt(path_file_output_txt, teks_hasil_transkripsi) # Menyimpan hasil ke .txt
+            print(f"Hasil transkripsi TXT untuk {path_gambar.name} disimpan di {path_file_output_txt}")
         
         except Exception as e:
             print(f"Gagal memproses {path_gambar.name}: {e}")

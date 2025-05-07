@@ -7,10 +7,12 @@ Program ini menggunakan Google Gemini API untuk mentranskripsi teks dari gambar-
 -   Menerima direktori input berisi gambar dokumen (PNG, JPG, JPEG).
 -   Membuat direktori output dengan nama yang sesuai dengan direktori input (misal: `nama_input_hasil_transkripsi`).
 -   Menyimpan hasil transkripsi setiap gambar dalam format JSON.
--   Nama file JSON sama dengan nama file gambar aslinya.
+-   **Baru**: Hasil transkripsi juga disimpan dalam format `.txt` (teks mentah, mengabaikan struktur paragraf asli jika ada prefix dari model) dengan nama file yang sama.
+-   Nama file JSON dan TXT sama dengan nama file gambar aslinya.
 -   Format JSON: `{"nama_file": "...", "teks_transkripsi": "..."}`.
 -   Menggunakan model `gemini-1.5-flash-latest` (atau model multimodal lain yang sesuai) untuk OCR.
 -   API key Google disimpan dengan aman menggunakan file `.env`.
+-   **Baru**: System prompt untuk model bahasa dapat dikonfigurasi melalui file `prompt.txt` di root proyek.
 -   Dependensi proyek dikelola dengan Poetry.
 
 ## Struktur Proyek
@@ -21,6 +23,9 @@ transkripsiArsip/
 ├── README.md              # File ini
 ├── .env                   # (Dibuat manual) Simpan API key di sini
 ├── .env.example           # Contoh untuk .env
+├── prompt.txt             # (Dibuat manual, opsional) Kustomisasi system prompt untuk model
+├── prompt.txt.example     # Contoh untuk prompt.txt
+├── .gitignore             # File yang diabaikan Git
 ├── src/
 │   └── transkripsi_arsip/
 │       ├── __init__.py
@@ -30,8 +35,7 @@ transkripsiArsip/
 └── data/                    # (Dibuat manual jika perlu untuk contoh)
     ├── input_contoh/
     │   └── (letakkan gambar di sini)
-    └── output/
-        └── (hasil akan disimpan di sini)
+    └── output/              # Hasil akan disimpan di sini (dibuat otomatis)
 ```
 
 ## Persiapan
@@ -55,6 +59,11 @@ transkripsiArsip/
         ```
         GOOGLE_API_KEY="API_KEY_ANDA"
         ```
+6.  **(Opsional) Kustomisasi System Prompt**:
+    *   Program akan mencari file `prompt.txt` di root direktori proyek (`/home/project/transkripsiArsip/prompt.txt`).
+    *   Jika Anda ingin memberikan instruksi khusus kepada model Gemini (misalnya, bagaimana cara menangani teks yang tidak jelas, format output tertentu dari model, dll.), buat file `prompt.txt`.
+    *   Anda bisa menyalin `prompt.txt.example` menjadi `prompt.txt` dan mengubah isinya sesuai kebutuhan.
+    *   Jika `prompt.txt` tidak ada atau kosong, system prompt default yang ada di `src/transkripsi_arsip/ocr.py` akan digunakan.
 
 ## Cara Menjalankan
 
@@ -77,8 +86,8 @@ transkripsiArsip/
     ```
 
 3.  **Lihat Hasil**:
-    *   Skrip akan membuat direktori output di dalam `transkripsiArsip/data/output/nama_direktori_input_anda_hasil_transkripsi/`.
-    *   Di dalamnya, Anda akan menemukan file-file JSON yang berisi hasil transkripsi untuk setiap gambar.
+    *   Skrip akan membuat direktori output di dalam `transkripsiArsip/data/output/nama_direktori_input_anda_hasil_transkripsi/` (atau struktur serupa tergantung path input).
+    *   Di dalamnya, Anda akan menemukan file-file `.json` dan `.txt` yang berisi hasil transkripsi untuk setiap gambar.
 
 ## Menangani Dokumen Panjang
 
@@ -96,6 +105,7 @@ Fungsi `ocr.py` saat ini mengirimkan gambar apa adanya. Jika Anda sering menghad
 
 ## Troubleshooting
 
--   **`ValueError: GOOGLE_API_KEY tidak ditemukan`**: Pastikan file `.env` ada di root proyek dan berisi `GOOGLE_API_KEY="KUNCI_ANDA"`.
+-   **`ValueError: GOOGLE_API_KEY tidak ditemukan`**: Pastikan file `.env` ada di root proyek dan berisi `GOOGLE_API_KEY="KUNCI_ANDA"` dan Anda menjalankan `poetry run ...` dari root proyek.
 -   **Error dari API Gemini**: Periksa pesan error. Mungkin terkait dengan format gambar, ukuran, konten yang diblokir karena alasan keamanan, atau masalah koneksi.
 -   **Tidak ada file gambar ditemukan**: Pastikan path ke direktori input benar dan direktori tersebut berisi file `.png`, `.jpg`, atau `.jpeg`.
+-   **Prompt tidak sesuai**: Jika hasil transkripsi kurang memuaskan, coba sesuaikan isi `prompt.txt` untuk memberikan instruksi yang lebih spesifik kepada model. Jika `prompt.txt` tidak ada, buatlah dari `prompt.txt.example`.

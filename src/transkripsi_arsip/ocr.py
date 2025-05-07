@@ -22,6 +22,28 @@ genai.configure(api_key=API_KEY)
 # Kita akan menggunakan 'gemini-1.5-flash-latest' sebagai contoh yang lebih modern.
 MODEL_NAME = "gemini-1.5-flash-latest" # Pastikan model ini mendukung input gambar
 
+DEFAULT_SYSTEM_PROMPT = "Transkripsikan semua teks yang ada dalam gambar ini secara akurat. Fokus hanya pada teks yang terlihat jelas. Abaikan elemen grafis atau noise pada gambar."
+
+def dapatkan_system_prompt() -> str:
+    """Membaca system prompt dari prompt.txt jika ada, jika tidak gunakan default."""
+    path_prompt_file = Path(__file__).resolve().parents[2] / "prompt.txt"
+    if path_prompt_file.is_file():
+        try:
+            with open(path_prompt_file, 'r', encoding='utf-8') as f:
+                prompt = f.read().strip()
+                if prompt:
+                    print(f"Menggunakan system prompt kustom dari: {path_prompt_file}")
+                    return prompt
+                else:
+                    print(f"File prompt.txt kosong, menggunakan prompt default.")
+                    return DEFAULT_SYSTEM_PROMPT
+        except Exception as e:
+            print(f"Error membaca file prompt.txt: {e}. Menggunakan prompt default.")
+            return DEFAULT_SYSTEM_PROMPT
+    else:
+        print("File prompt.txt tidak ditemukan. Menggunakan prompt default.")
+        return DEFAULT_SYSTEM_PROMPT
+
 def transkripsi_gambar(path_gambar: Path) -> str:
     """
     Mentranskripsi teks dari sebuah gambar menggunakan Gemini API.
@@ -34,7 +56,8 @@ def transkripsi_gambar(path_gambar: Path) -> str:
         model = genai.GenerativeModel(MODEL_NAME)
 
         # Prompt untuk mengarahkan model melakukan OCR
-        prompt_ocr = "Transkripsikan teks yang ada dalam gambar ini. Fokus hanya pada teks yang terlihat jelas."
+        # prompt_ocr = "Transkripsikan teks yang ada dalam gambar ini. Fokus hanya pada teks yang terlihat jelas."
+        prompt_ocr = dapatkan_system_prompt() # Menggunakan prompt yang bisa dikonfigurasi
 
         # Mengirim gambar dan prompt ke model
         # Pastikan format gambar didukung dan cara mengirimkannya sesuai dokumentasi API.

@@ -104,3 +104,9 @@ Thumbs.db
 
 # File .env (sudah termasuk di bagian Environments, tapi ditegaskan lagi)
 .env
+
+# User-specific prompt file
+prompt.txt
+
+# Output directory
+output/
