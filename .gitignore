@@ -108,5 +108,16 @@ Thumbs.db
 # User-specific prompt file
 prompt.txt
 
-# Output directory
-output/
+# Log file
+transcription_log.txt
+output_transkripsi/
+
+
+*.Identifier
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.svg
+*.tiff

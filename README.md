@@ -5,89 +5,65 @@ Program ini menggunakan Google Gemini API untuk mentranskripsi teks dari gambar-
 ## Fitur
 
 -   Menerima direktori input berisi gambar dokumen (PNG, JPG, JPEG).
--   Membuat direktori output dengan nama yang sesuai dengan direktori input (misal: `nama_input_hasil_transkripsi`).
--   Menyimpan hasil transkripsi setiap gambar dalam format JSON.
--   **Baru**: Hasil transkripsi juga disimpan dalam format `.txt` (teks mentah, mengabaikan struktur paragraf asli jika ada prefix dari model) dengan nama file yang sama.
+-   Membuat direktori output (`output_transkripsi/nama_input_hasil_transkripsi/`) untuk menyimpan hasil.
+-   Menyimpan hasil transkripsi setiap gambar dalam format JSON dan TXT.
 -   Nama file JSON dan TXT sama dengan nama file gambar aslinya.
 -   Format JSON: `{"nama_file": "...", "teks_transkripsi": "..."}`.
--   Menggunakan model `gemini-1.5-flash-latest` (atau model multimodal lain yang sesuai) untuk OCR.
+-   Menggunakan model `gemini-1.5-flash-latest` untuk OCR.
 -   API key Google disimpan dengan aman menggunakan file `.env`.
--   **Baru**: System prompt untuk model bahasa dapat dikonfigurasi melalui file `prompt.txt` di root proyek.
+-   System prompt untuk model bahasa dapat dikonfigurasi melalui file `prompt.txt`.
 -   Dependensi proyek dikelola dengan Poetry.
+-   **Baru**: Menampilkan progress bar selama proses transkripsi.
+-   **Baru**: Membuat file log (`transcription_log.txt`) yang merekam detail proses (waktu mulai/selesai, total waktu, total file diproses/dilewati, estimasi token).
+-   **Baru**: Tidak akan mentranskripsi ulang dokumen jika file outputnya (JSON dan TXT) sudah ada.
 
 ## Struktur Proyek
 
 ```
 transkripsiArsip/
-├── pyproject.toml         # Konfigurasi Poetry
-├── README.md              # File ini
-├── .env                   # (Dibuat manual) Simpan API key di sini
-├── .env.example           # Contoh untuk .env
-├── prompt.txt             # (Dibuat manual, opsional) Kustomisasi system prompt untuk model
-├── prompt.txt.example     # Contoh untuk prompt.txt
-├── .gitignore             # File yang diabaikan Git
+├── pyproject.toml
+├── README.md
+├── .env
+├── .env.example
+├── prompt.txt             # (Opsional) Kustomisasi system prompt
+├── prompt.txt.example
+├── .gitignore
+├── transcription_log.txt  # File log (dibuat otomatis)
 ├── src/
 │   └── transkripsi_arsip/
 │       ├── __init__.py
-│       ├── main.py          # Skrip utama
-│       ├── ocr.py           # Logika OCR dengan Gemini
-│       └── utils.py         # Fungsi utilitas
-└── data/                    # (Dibuat manual jika perlu untuk contoh)
-    ├── input_contoh/
-    │   └── (letakkan gambar di sini)
-    └── output/              # Hasil akan disimpan di sini (dibuat otomatis)
+│       ├── main.py
+│       ├── ocr.py
+│       └── utils.py
+├── data/                    # (Contoh) Direktori untuk input gambar Anda
+│   └── input_contoh/
+└── output_transkripsi/      # Direktori output utama (dibuat otomatis)
+    └── nama_direktori_input_hasil_transkripsi/
+        └── (hasil .json dan .txt disimpan di sini)
 ```
 
 ## Persiapan
 
-1.  **Install Python**: Pastikan Python versi 3.9 atau lebih baru terinstal.
-2.  **Install Poetry**: Jika belum terinstal, ikuti petunjuk di [situs resmi Poetry](https://python-poetry.org/docs/#installation).
-3.  **Clone Proyek (jika dari Git)**:
+1.  **Install Python & Poetry**: Seperti sebelumnya.
+2.  **Clone & Install Dependensi**:
     ```bash
-    git clone <url_repository_anda>
-    cd transkripsiArsip
+    # git clone ... (jika perlu)
+    # cd transkripsiArsip
+    poetry install 
     ```
-4.  **Install Dependensi**:
-    ```bash
-    poetry install
-    ```
-5.  **Siapkan API Key**:
-    *   Dapatkan API Key dari [Google AI Studio](https://aistudio.google.com/app/apikey) atau Google Cloud Console.
-    *   Buat file bernama `.env` di root direktori proyek (sejajar dengan `pyproject.toml`).
-    *   Salin isi dari `.env.example` ke `.env`.
-    *   Masukkan API key Anda ke dalam file `.env`:
-        ```
-        GOOGLE_API_KEY="API_KEY_ANDA"
-        ```
-6.  **(Opsional) Kustomisasi System Prompt**:
-    *   Program akan mencari file `prompt.txt` di root direktori proyek (`/home/project/transkripsiArsip/prompt.txt`).
-    *   Jika Anda ingin memberikan instruksi khusus kepada model Gemini (misalnya, bagaimana cara menangani teks yang tidak jelas, format output tertentu dari model, dll.), buat file `prompt.txt`.
-    *   Anda bisa menyalin `prompt.txt.example` menjadi `prompt.txt` dan mengubah isinya sesuai kebutuhan.
-    *   Jika `prompt.txt` tidak ada atau kosong, system prompt default yang ada di `src/transkripsi_arsip/ocr.py` akan digunakan.
+    Perintah `poetry install` akan menginstal `tqdm` yang baru ditambahkan.
+3.  **Siapkan API Key & Prompt**: Seperti sebelumnya (`.env` dan `prompt.txt` opsional).
 
 ## Cara Menjalankan
 
-1.  **Siapkan Direktori Input**:
-    *   Buat sebuah direktori di mana saja (misalnya, `dokumen_untuk_transkripsi`).
-    *   Letakkan semua file gambar dokumen (format `.png`, `.jpg`, atau `.jpeg`) yang ingin Anda transkripsi ke dalam direktori tersebut.
+Sama seperti sebelumnya. Jalankan dari root direktori proyek:
+```bash
+poetry run transkripsi path/ke/direktori_input_anda
+```
+Anda akan melihat progress bar di terminal. Setelah selesai, periksa `transcription_log.txt` di root proyek dan hasil transkripsi di direktori `output_transkripsi`.
 
-2.  **Jalankan Skrip Transkripsi**:
-    Gunakan perintah berikut dari terminal, pastikan Anda berada di root direktori proyek (`transkripsiArsip`):
-    ```bash
-    poetry run transkripsi path/ke/direktori_input_anda
-    ```
-    Contoh:
-    ```bash
-    poetry run transkripsi data/input_contoh
-    ```
-    Atau jika direktori input Anda bernama `arsip_bulan_ini` dan berada di luar folder proyek:
-    ```bash
-    poetry run transkripsi /path/lengkap/ke/arsip_bulan_ini
-    ```
-
-3.  **Lihat Hasil**:
-    *   Skrip akan membuat direktori output di dalam `transkripsiArsip/data/output/nama_direktori_input_anda_hasil_transkripsi/` (atau struktur serupa tergantung path input).
-    *   Di dalamnya, Anda akan menemukan file-file `.json` dan `.txt` yang berisi hasil transkripsi untuk setiap gambar.
+## Catatan Mengenai Token
+Informasi jumlah token yang digunakan diambil dari `usage_metadata` respons API Gemini. Untuk input gambar, metrik ini mungkin tidak selalu tersedia atau mungkin tidak secara langsung mencerminkan "token" gambar seperti pada input teks. Log akan menampilkan "N/A" jika tidak tersedia.
 
 ## Menangani Dokumen Panjang
 

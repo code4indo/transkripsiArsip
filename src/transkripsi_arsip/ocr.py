@@ -4,6 +4,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from pathlib import Path
 from PIL import Image
+from typing import Tuple, Optional
 
 # Muat environment variables dari .env
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / '.env')
@@ -15,13 +16,7 @@ if not API_KEY:
 
 genai.configure(api_key=API_KEY)
 
-# Menggunakan model gemini-1.5-flash karena gemini-2.0-flash mungkin belum ada atau nama alias
-# Sesuaikan dengan nama model yang tersedia dan sesuai untuk tugas OCR.
-# Untuk tugas OCR gambar, model yang mendukung input multimodal (gambar) diperlukan.
-# 'gemini-1.5-flash-latest' atau 'gemini-pro-vision' (jika masih ada) adalah pilihan yang baik.
-# Kita akan menggunakan 'gemini-1.5-flash-latest' sebagai contoh yang lebih modern.
-MODEL_NAME = "gemini-1.5-flash-latest" # Pastikan model ini mendukung input gambar
-
+MODEL_NAME = "gemini-1.5-flash-latest"
 DEFAULT_SYSTEM_PROMPT = "Transkripsikan semua teks yang ada dalam gambar ini secara akurat. Fokus hanya pada teks yang terlihat jelas. Abaikan elemen grafis atau noise pada gambar."
 
 def dapatkan_system_prompt() -> str:
@@ -32,65 +27,59 @@ def dapatkan_system_prompt() -> str:
             with open(path_prompt_file, 'r', encoding='utf-8') as f:
                 prompt = f.read().strip()
                 if prompt:
-                    print(f"Menggunakan system prompt kustom dari: {path_prompt_file}")
+                    # print(f"Menggunakan system prompt kustom dari: {path_prompt_file}") # Dihilangkan agar tidak spam console
                     return prompt
                 else:
-                    print(f"File prompt.txt kosong, menggunakan prompt default.")
+                    # print(f"File prompt.txt kosong, menggunakan prompt default.")
                     return DEFAULT_SYSTEM_PROMPT
         except Exception as e:
             print(f"Error membaca file prompt.txt: {e}. Menggunakan prompt default.")
             return DEFAULT_SYSTEM_PROMPT
     else:
-        print("File prompt.txt tidak ditemukan. Menggunakan prompt default.")
+        # print("File prompt.txt tidak ditemukan. Menggunakan prompt default.")
         return DEFAULT_SYSTEM_PROMPT
 
-def transkripsi_gambar(path_gambar: Path) -> str:
+def transkripsi_gambar(path_gambar: Path) -> Tuple[str, Optional[int]]:
     """
     Mentranskripsi teks dari sebuah gambar menggunakan Gemini API.
+    Mengembalikan tuple (teks_transkripsi, total_token_digunakan).
+    total_token_digunakan bisa None jika API tidak menyediakannya.
     """
-    print(f"Mentranskripsi gambar: {path_gambar.name}...")
+    # print(f"Mentranskripsi gambar: {path_gambar.name}...") # Akan dihandle oleh logger
     try:
         img = Image.open(path_gambar)
-        # Model Gemini yang mendukung multimodal input (seperti gambar)
-        # biasanya menerima list dari parts, di mana part bisa berupa teks atau data gambar.
         model = genai.GenerativeModel(MODEL_NAME)
-
-        # Prompt untuk mengarahkan model melakukan OCR
-        # prompt_ocr = "Transkripsikan teks yang ada dalam gambar ini. Fokus hanya pada teks yang terlihat jelas."
-        prompt_ocr = dapatkan_system_prompt() # Menggunakan prompt yang bisa dikonfigurasi
-
-        # Mengirim gambar dan prompt ke model
-        # Pastikan format gambar didukung dan cara mengirimkannya sesuai dokumentasi API.
-        # Untuk 'gemini-1.5-flash-latest', kita bisa mengirimkan objek PIL Image secara langsung.
+        prompt_ocr = dapatkan_system_prompt()
         response = model.generate_content([prompt_ocr, img])
 
-        # Menangani respons dari API
-        # Periksa apakah ada teks yang dihasilkan dan apakah ada error
+        teks_hasil = ""
         if response and hasattr(response, 'text') and response.text:
-            print(f"Transkripsi berhasil untuk {path_gambar.name}.")
-            return response.text
-        elif response and hasattr(response, 'parts'): # Beberapa model mungkin mengembalikan 'parts'
-            all_text = "".join(part.text for part in response.parts if hasattr(part, 'text'))
-            if all_text:
-                print(f"Transkripsi berhasil untuk {path_gambar.name}.")
-                return all_text
-            else:
-                print(f"Tidak ada teks yang terdeteksi atau respons tidak mengandung teks untuk {path_gambar.name}.")
-                return ""
-        else:
-            # Log detail respons jika tidak sesuai harapan untuk debugging
-            print(f"Respons tidak terduga dari API untuk {path_gambar.name}: {response}")
-            # Coba akses prompt_feedback jika ada untuk melihat alasan blokir
+            teks_hasil = response.text
+        elif response and hasattr(response, 'parts'):
+            teks_hasil = "".join(part.text for part in response.parts if hasattr(part, 'text'))
+        
+        token_count = None
+        if hasattr(response, 'usage_metadata') and response.usage_metadata:
+            if hasattr(response.usage_metadata, 'total_token_count'):
+                token_count = response.usage_metadata.total_token_count
+            elif hasattr(response.usage_metadata, 'prompt_token_count') and hasattr(response.usage_metadata, 'candidates_token_count'):
+                token_count = response.usage_metadata.prompt_token_count + response.usage_metadata.candidates_token_count
+
+        if not teks_hasil:
+            # print(f"Tidak ada teks yang terdeteksi atau respons tidak mengandung teks untuk {path_gambar.name}.")
             if hasattr(response, 'prompt_feedback') and response.prompt_feedback:
-                print(f"Prompt feedback: {response.prompt_feedback}")
-            return "Error: Respons tidak valid dari API atau tidak ada teks yang dihasilkan."
+                # print(f"Prompt feedback: {response.prompt_feedback}")
+                return f"Error: Konten mungkin diblokir. Feedback: {response.prompt_feedback}", token_count
+            return "Error: Respons tidak valid dari API atau tidak ada teks yang dihasilkan.", token_count
+        
+        # print(f"Transkripsi berhasil untuk {path_gambar.name}.") # Akan dihandle oleh logger
+        return teks_hasil, token_count
 
     except Exception as e:
-        print(f"Terjadi error saat mentranskripsi {path_gambar.name}: {e}")
-        # Periksa apakah error terkait dengan safety settings
+        # print(f"Terjadi error saat mentranskripsi {path_gambar.name}: {e}") # Akan dihandle oleh logger
         if "SAFETY" in str(e).upper():
-            return "Error: Konten diblokir karena pengaturan keamanan. Coba gambar lain atau sesuaikan pengaturan (jika memungkinkan)."
-        return f"Error: {str(e)}"
+            return "Error: Konten diblokir karena pengaturan keamanan.", None
+        return f"Error: {str(e)}", None
 
 # Catatan mengenai dokumen panjang:
 # Model Gemini memiliki batasan token input. Untuk dokumen yang sangat panjang (misalnya, gambar buku dengan banyak halaman

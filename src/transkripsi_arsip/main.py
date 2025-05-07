@@ -4,62 +4,85 @@ from pathlib import Path
 from . import utils
 from . import ocr
 import time
+from tqdm import tqdm # Import tqdm
 
 def jalankan_transkripsi(path_direktori_input_str: str):
     """
     Fungsi utama untuk menjalankan proses transkripsi.
     """
+    project_root = Path(__file__).resolve().parents[2]
+    utils.init_log()
+    utils.log_event(f"Memulai proses transkripsi untuk direktori: {path_direktori_input_str}")
+
     path_direktori_input = Path(path_direktori_input_str).resolve()
 
     if not path_direktori_input.is_dir():
-        print(f"Error: Direktori input '{path_direktori_input}' tidak ditemukan.")
+        utils.log_event(f"Error: Direktori input '{path_direktori_input}' tidak ditemukan.")
+        utils.finalize_log(project_root)
         return
 
-    # Membuat nama direktori output berdasarkan direktori input
-    # Misalnya, jika input adalah 'data/dokumen_penting', output akan menjadi 'data/dokumen_penting_output'
-    # atau ditempatkan dalam direktori 'output' dengan nama yang sama.
-    # Untuk konsistensi, kita akan buat direktori output di dalam direktori 'data' jika belum ada,
-    # dan nama subdirektori output akan sama dengan nama direktori input + '_hasil'.
-    
     nama_direktori_output = f"{path_direktori_input.name}_hasil_transkripsi"
-    path_direktori_output_induk = path_direktori_input.parent / "output" # Menyimpan semua output di 'data/output/'
+    # Menyimpan output log dan hasil transkripsi relatif terhadap struktur proyek
+    # Misal output akan ada di /home/project/transkripsiArsip/output_transkripsi/
+    path_direktori_output_induk = project_root / "output_transkripsi" 
     path_direktori_output = path_direktori_output_induk / nama_direktori_output
     
-    utils.pastikan_direktori_ada(path_direktori_output)
-    print(f"Direktori input: {path_direktori_input}")
-    print(f"Direktori output akan dibuat di: {path_direktori_output}")
+    # Membuat subdirektori untuk output JSON dan TXT
+    path_direktori_output_json = path_direktori_output / "json"
+    path_direktori_output_txt = path_direktori_output / "txt"
+    
+    utils.pastikan_direktori_ada(path_direktori_output_json)
+    utils.pastikan_direktori_ada(path_direktori_output_txt)
+    utils.log_event(f"Direktori input: {path_direktori_input}")
+    utils.log_event(f"Direktori output utama: {path_direktori_output}")
+    utils.log_event(f"Output JSON akan disimpan di: {path_direktori_output_json}")
+    utils.log_event(f"Output TXT akan disimpan di: {path_direktori_output_txt}")
+
+    # Dapatkan system prompt sekali saja untuk dicatat di log jika perlu
+    # current_system_prompt = ocr.dapatkan_system_prompt() # Bisa dicatat jika ingin tahu prompt yg digunakan
+    # utils.log_event(f"Menggunakan system prompt: {current_system_prompt[:100]}...") # Log sebagian prompt
 
     daftar_gambar = utils.dapatkan_file_gambar(path_direktori_input)
 
     if not daftar_gambar:
-        print(f"Tidak ada file gambar yang ditemukan di '{path_direktori_input}'.")
+        utils.log_event(f"Tidak ada file gambar yang ditemukan di '{path_direktori_input}'.")
+        utils.finalize_log(project_root)
         return
 
-    print(f"Ditemukan {len(daftar_gambar)} file gambar untuk ditranskripsi.")
+    utils.log_event(f"Ditemukan {len(daftar_gambar)} file gambar untuk diproses.")
 
-    for path_gambar in daftar_gambar:
-        print(f"Memproses {path_gambar.name}...")
+    # Menggunakan tqdm untuk progress bar
+    for path_gambar in tqdm(daftar_gambar, desc="Mentranskripsi Gambar", unit="file"):
+        nama_file_output_base = path_gambar.stem
+        # Mengarahkan path output ke subdirektori yang sesuai
+        path_file_output_json = path_direktori_output_json / (nama_file_output_base + ".json")
+        path_file_output_txt = path_direktori_output_txt / (nama_file_output_base + ".txt")
+
+        # Cek apakah file output sudah ada (misalnya .json dan .txt di lokasi baru)
+        if path_file_output_json.is_file() and path_file_output_txt.is_file():
+            utils.log_event(f"Output untuk {path_gambar.name} sudah ada, dilewati.")
+            utils.increment_skipped_count()
+            continue # Lanjut ke gambar berikutnya
+
+        utils.log_event(f"Memproses {path_gambar.name}...")
         try:
-            teks_hasil_transkripsi = ocr.transkripsi_gambar(path_gambar)
-            
-            nama_file_output_base = path_gambar.stem
-            path_file_output_json = path_direktori_output / (nama_file_output_base + ".json")
-            path_file_output_txt = path_direktori_output / (nama_file_output_base + ".txt") # Path untuk file .txt
+            teks_hasil_transkripsi, token_digunakan = ocr.transkripsi_gambar(path_gambar)
+            utils.add_tokens(token_digunakan)
             
             utils.simpan_hasil_json(path_file_output_json, path_gambar.name, teks_hasil_transkripsi)
-            print(f"Hasil transkripsi JSON untuk {path_gambar.name} disimpan di {path_file_output_json}")
+            # utils.log_event(f"Hasil transkripsi JSON untuk {path_gambar.name} disimpan di {path_file_output_json}")
 
-            utils.simpan_hasil_txt(path_file_output_txt, teks_hasil_transkripsi) # Menyimpan hasil ke .txt
-            print(f"Hasil transkripsi TXT untuk {path_gambar.name} disimpan di {path_file_output_txt}")
+            utils.simpan_hasil_txt(path_file_output_txt, teks_hasil_transkripsi)
+            utils.log_event(f"Hasil transkripsi (JSON & TXT) untuk {path_gambar.name} disimpan.")
+            utils.increment_processed_count()
         
         except Exception as e:
-            print(f"Gagal memproses {path_gambar.name}: {e}")
+            utils.log_event(f"Gagal memproses {path_gambar.name}: {e}")
         
-        # Memberi jeda singkat untuk menghindari rate limit API (jika ada dan sering terjadi)
-        # time.sleep(1) # Sesuaikan jika perlu
+        # time.sleep(0.1) # Jeda kecil jika diperlukan, tqdm menangani refresh rate
 
-    print("Proses transkripsi selesai.")
-    print(f"Semua hasil disimpan di direktori: {path_direktori_output}")
+    utils.log_event("Proses transkripsi selesai.")
+    utils.finalize_log(project_root)
 
 def run():
     parser = argparse.ArgumentParser(description="Program Transkripsi Arsip Dokumen Gambar.")
@@ -73,15 +96,4 @@ def run():
     jalankan_transkripsi(args.direktori_input)
 
 if __name__ == "__main__":
-    # Contoh penggunaan jika dijalankan langsung (untuk testing internal)
-    # Pastikan ada direktori 'data/input_contoh' dengan gambar di dalamnya
-    # dan file .env sudah diatur dengan API Key.
-    # contoh_input_dir = Path(__file__).resolve().parents[2] / "data" / "input_contoh"
-    # utils.pastikan_direktori_ada(contoh_input_dir) # Buat jika belum ada
-    # print(f"Untuk pengujian, pastikan ada gambar di: {contoh_input_dir} dan .env sudah benar.")
-    # print("Jalankan dengan: poetry run transkripsi path/ke/direktori_input_anda")
-    
-    # Untuk menjalankan dari CLI setelah instalasi dengan poetry:
-    # poetry install
-    # poetry run transkripsi nama_direktori_input_anda
     run()
