@@ -110,7 +110,7 @@ prompt.txt
 
 # Log file
 transcription_log.txt
-output_transkripsi/
+#output_transkripsi/
 
 
 *.Identifier
